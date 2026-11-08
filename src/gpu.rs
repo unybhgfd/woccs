@@ -1,3 +1,5 @@
+use wgpu::{Backends, InstanceDescriptor};
+
 pub struct WgpuContext {
     pub instance: wgpu::Instance,
     pub adapter: wgpu::Adapter,
@@ -6,8 +8,11 @@ pub struct WgpuContext {
 }
 
 impl WgpuContext {
-    pub async fn new() -> Self {
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle());
+    pub async fn new(backends: Backends) -> Self {
+        let instance = wgpu::Instance::new(InstanceDescriptor {
+            backends: backends,
+            ..InstanceDescriptor::new_without_display_handle()
+        });
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::default(),
@@ -22,7 +27,7 @@ impl WgpuContext {
                 label: None,
                 trace: wgpu::Trace::Off,
                 experimental_features: wgpu::ExperimentalFeatures::disabled(),
-                required_features: wgpu::Features::empty(),
+                required_features: wgpu::Features::TIMESTAMP_QUERY,
                 required_limits: wgpu::Limits::default(),
                 memory_hints: wgpu::MemoryHints::Performance,
             })

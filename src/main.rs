@@ -1,15 +1,12 @@
 use rand::RngExt;
 use wgpu::{
-    BindGroupDescriptor, BindGroupEntry, BindGroupLayoutDescriptor, BindGroupLayoutEntry,
-    BindingType, BufferBindingType, BufferDescriptor, BufferUsages, CommandEncoderDescriptor,
-    ComputePassDescriptor, ComputePipelineDescriptor, PipelineCompilationOptions,
-    PipelineLayoutDescriptor, PollType, ShaderModuleDescriptor, ShaderSource, ShaderStages,
+    Backends, BindGroupDescriptor, BindGroupEntry, BindGroupLayoutDescriptor, BindGroupLayoutEntry, BindingType, BufferBindingType, BufferDescriptor, BufferUsages, CommandEncoderDescriptor, ComputePassDescriptor, ComputePipelineDescriptor, PipelineCompilationOptions, PipelineLayoutDescriptor, PollType, ShaderModuleDescriptor, ShaderSource, ShaderStages,
 };
 
 mod emitter;
 mod gpu;
 
-const DATA_LENGTH: usize = 9178;
+const DATA_LENGTH: usize = 2971;
 const BUFFER_SIZE: usize = DATA_LENGTH * size_of::<f32>();
 
 #[derive(encase::ShaderType)]
@@ -28,7 +25,7 @@ impl Uniform {
 #[pollster::main]
 async fn main() {
     // 创建设备上下文
-    let ctx = gpu::WgpuContext::new().await;
+    let ctx = gpu::WgpuContext::new(Backends::VULKAN).await;
 
     // 生成数据
     let mut rng = rand::rng();

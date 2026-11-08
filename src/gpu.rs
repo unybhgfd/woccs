@@ -1,12 +1,12 @@
 pub struct WgpuContext {
-    instance: wgpu::Instance,
-    adapter: wgpu::Adapter,
-    device: wgpu::Device,
-    queue: wgpu::Queue
+    pub instance: wgpu::Instance,
+    pub adapter: wgpu::Adapter,
+    pub device: wgpu::Device,
+    pub queue: wgpu::Queue,
 }
 
 impl WgpuContext {
-    async fn new() -> Self{
+    pub async fn new() -> Self {
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle());
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
@@ -29,7 +29,10 @@ impl WgpuContext {
             .await
             .expect("无法创建 GPU 设备");
         Self {
-            instance, adapter, device, queue
+            instance,
+            adapter,
+            device,
+            queue,
         }
     }
 }

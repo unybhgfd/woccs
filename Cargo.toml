@@ -15,3 +15,6 @@ winit = { version = "0.30.13", features = ["x11"] }
 naga = { version = "30.0.1", features = ["wgsl-out", "wgsl-in"] }
 env_logger = "0.11.11"
 pollster = { version = "1.0.1", features = ["macro"] }
+rand = "0.10.3"
+bytemuck = "1.25.2"
+encase = { version = "0.13.0" }

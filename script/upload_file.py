@@ -49,7 +49,6 @@ class XesFileUploader:
             file_path: str,
             filename: str | None = None,
             check_if_exists: Literal["auto", "yes", "no"] = "auto",
-            cli_progress_bar: bool = True
     ):
         """init
 
@@ -68,7 +67,7 @@ class XesFileUploader:
 
         self.file_path = file_path
         self.param: Optional[XesFileUploader.OSSParamType] = None
-        self.md5_hex_string = file_md5(file_path, cli_progress_bar=cli_progress_bar).hexdigest()
+        self.md5_hex_string = file_md5(file_path).hexdigest()
         self.filename = filename
         self.need_check_upload = False
         self.uploaded = False
@@ -110,7 +109,7 @@ class XesFileUploader:
         """获取上传后文件对应的url, 即使还没有上传文件"""
         return (await self._get_param())["data"]["url"]
 
-    async def upload(self, cli_progress_bar: bool = True):
+    async def upload(self):
         """上传文件"""
 
         if self.uploaded:
@@ -125,33 +124,14 @@ class XesFileUploader:
 
                 if query_response.status == 200:
                     self.uploaded = True
-                    if cli_progress_bar:
-                        rich.print("[italic]存在md5相同文件, 跳过上传[/]")
                     return
 
-            if cli_progress_bar:
-                with rich.progress.Progress() as progress:
-                    task = progress.add_task("uploading...", total=self.file_size)
-
-                    async def data_sender():
-                        with open(self.file_path, 'rb') as f:
-                            while chunk := f.read(CHUNK_SIZE):
-                                yield chunk
-                                progress.update(task, advance=len(chunk))
-
-                    upload_response = await session.put(
-                        url=param["host"],
-                        headers=param["headers"],
-                        data=data_sender(),
-                        timeout=None
-                    )
-            else:
-                with open(self.file_path, 'rb') as file:
-                    upload_response = await session.put(
-                        url=param["host"],
-                        headers=param["headers"],
-                        data=file
-                    )
+            with open(self.file_path, 'rb') as file:
+                upload_response = await session.put(
+                    url=param["host"],
+                    headers=param["headers"],
+                    data=file
+                )
 
             upload_response.raise_for_status()
 

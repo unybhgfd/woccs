@@ -1,0 +1,3 @@
+from file_sync_backend import AbstractFileSyncBackendSender, AbstractFileSyncBackendReceiver
+
+class XesCloudVar

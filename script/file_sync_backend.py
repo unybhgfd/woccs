@@ -1,7 +1,7 @@
 """消息后端收/发抽象类"""
 
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Callable, Coroutine
 import pathlib
 from enum import Enum
 import json
@@ -16,8 +16,7 @@ from upload_file import XesFileUploader, XES_OSS_URL_PREFIX
 
 __all__ = [
     "FILE_RGLOB_PATTERN",
-    "AbstractFileSyncBackendSender",
-    "AbstractFileSyncBackendReceiver",
+    "AbstractFileSyncApi",
 ]
 
 FilesFull = dict[str, str]  # {filepath: md5}
@@ -43,16 +42,45 @@ class Msgs:
     SYNC = "[magenta]SYNC"
 
 
-class _AbstractFileSyncBackend(ABC):
-    """文件同步收发后端抽象类"""
+async def async_no_op(_: str) -> None:
+    """空异步函数"""
+
+
+class AbstractFileSyncApi(ABC):
+    """文件同步网络后端抽象类"""
+
+    def __init__(self) -> None:
+        self._handle: Callable[[str], Coroutine[Any, Any, Any]] = async_no_op
 
     @abstractmethod
-    async def refresh(self):
-        """轮询刷新，收到消息须调用 `self._received`"""
+    async def _refresh(self):
+        """轮询刷新，新消息调用 `self._handle`"""
 
     @abstractmethod
     async def _send_raw(self, message: str):
         """通过网络发送消息"""
+
+    def sender(self):
+        obj = FileSyncSender(self)
+        self._handle = obj._received_raw
+        return obj
+
+    def receiver(self):
+        obj = FileSyncReceiver(self)
+        self._handle = obj._received_raw
+        return obj
+
+
+class _FileSync(ABC):
+    def __init__(self, api: AbstractFileSyncApi):
+        self.api = api
+
+    async def refresh(self):
+        """轮询刷新"""
+        await self.api._refresh()
+
+    async def _send_raw(self, message: str):
+        await self.api._send_raw(message)
 
     async def _send(self, message: Any, ty: MessageTypes):
         print(Msgs.SEND, ty.name)
@@ -68,12 +96,13 @@ class _AbstractFileSyncBackend(ABC):
         """收到消息的回调函数"""
 
 
-class AbstractFileSyncBackendSender(_AbstractFileSyncBackend):
+class FileSyncSender(_FileSync):
     """文件同步输出方，只读并上传文件。假设文件数量少且体积不大"""
 
     TARGET_DIR = pathlib.Path(__file__).resolve().parent / "src"
 
-    def __init__(self) -> None:
+    def __init__(self, api: AbstractFileSyncApi) -> None:
+        super().__init__(api)
         self._prev_check_time = 0
         self._paths_set: set[str] = set()
 
@@ -94,7 +123,7 @@ class AbstractFileSyncBackendSender(_AbstractFileSyncBackend):
         return diffs
 
     def _get_diff_files(self, max_time: float) -> set[str]:
-        """范围：`self.prev_check_time` 到 `max_time`"""
+        """范围：`self._prev_check_time` 到 `max_time`"""
         paths = self.TARGET_DIR.rglob(FILE_RGLOB_PATTERN)
         diffs: set[str] = set()
         self._paths_set = set()
@@ -142,12 +171,13 @@ class AbstractFileSyncBackendSender(_AbstractFileSyncBackend):
             print(Msgs.ERROR, "错误的消息：", {"ty": ty, "message": message})
 
 
-class AbstractFileSyncBackendReceiver(_AbstractFileSyncBackend):
+class FileSyncReceiver(_FileSync):
     """文件同步接收方，更新自身文件"""
 
     TARGET_DIR = pathlib.Path(__file__).resolve().parent / "src"
 
-    def __init__(self) -> None:
+    def __init__(self, api: AbstractFileSyncApi) -> None:
+        super().__init__(api)
         self.received_event = asyncio.Event()
         self.need_full = True
 
